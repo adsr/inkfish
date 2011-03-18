@@ -1,42 +1,89 @@
 package cc.atoi.inkfish;
 
+import javax.sound.midi.*;
+import org.mozilla.javascript.*;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import javax.sound.midi.*;
-import org.mozilla.javascript.*;
-import java.util.jar.*;
-import java.io.*;
-import java.net.*;
+import java.util.jar.JarFile;
+import java.net.URL;
+import java.net.URLClassLoader;
 
-/*
- * Inkfish is a JavaScriptable extensible MIDI sequencer
+/**
+ * Extensible JavaScriptable MIDI sequencer
+ * @author Adam Saponara
  */
 public class Inkfish implements InkClockListener, MidiInputListener {
 
 	/**
-	 * Sequencer properties
+	 * Number of ticks or pulses per quarter note.
 	 */
 	protected int ppqn;
+	
+	/**
+	 * Device that will send us sequencing events. Null if using internal
+	 * sequencing mode.
+	 */
 	protected MidiInput sequencer;
+	
+	/**
+	 * Device or program that will send us clock events (start, stop, etc.)
+	 */
 	protected InkClock clock;
+	
+	/**
+	 * Incrementing tick value
+	 */
 	protected long tick;
 
 	/**
-	 * MIDI IO properties
+	 * Map of MIDI input aliases and their device representations. The keys of
+	 * this map become variables in user JavaScript.
 	 */
 	protected HashMap<String, MidiInput> midiIns;
+
+	/**
+	 * Map of MIDI output aliases and their device representations. The keys of
+	 * this map become variables in user JavaScript.
+	 */
 	protected HashMap<String, MidiOutput> midiOuts;
 	
 	/**
-	 * JavaScript properties
+	 * The "ontick" function in user JavaScript will be called every N ticks
+	 * where N is jsDivisor.
 	 */
 	protected int jsDivisor;
+	
+	/**
+	 * Runtime context of user JavaScript
+	 */
 	protected Context jsContext;
+	
+	/**
+	 * Top-level scope of user JavaScript
+	 */
 	protected Scriptable jsScope;
+	
+	/**
+	 * Reference to "onmidiin" function in user JavaScript 
+	 */
 	protected Function jsMidiInFunc;
+
+	/**
+	 * Reference to "ontick" function in user JavaScript 
+	 */
 	protected Function jsTickFunc;
+	
+	/**
+	 * Array of all MIDI Output JavaScripts objects
+	 * @todo needed?
+	 */
 	protected MidiIoObject[] jsMidiOuts;
+	
+	/**
+	 * Directory to search for user JavaScript and other resources
+	 */
 	protected File trackDir;
 
 	/**
@@ -75,10 +122,9 @@ public class Inkfish implements InkClockListener, MidiInputListener {
 			}
 			else {
 				clock = new InkClockExternalMidi(this, new MidiInput(device), ppqn);
-				this.sequencer = new MidiInput(device);
+				sequencer = new MidiInput(device);
 			}
 			
-			this.clock = new InkClockExternalMidi(this, sequencer, ppqn);
 		}
 		else {
 			// Internal sequencer (default to 21 ms delay)
@@ -141,7 +187,6 @@ public class Inkfish implements InkClockListener, MidiInputListener {
 
 			// Parse trackDir/*.js as user scripts
 			BufferedInputStream fin;
-			StringBuffer jsBuffer = new StringBuffer();
 			byte[] buffer;
 			File[] scripts;
 			scripts = trackDir.listFiles(new FileFilter() {
@@ -193,8 +238,6 @@ public class Inkfish implements InkClockListener, MidiInputListener {
 	 * @param isIn			a flag indicating whether these are MidiIn or 
 	 *						MidiOut devices
 	 * @param midiLoader	a MidiDeviceLoader instance
-	 * @throws IllegalArgumentException
-	 * @throws MidiUnavailableException
 	 */
 	protected void loadMidiIo(ArrayList<String> ioDefs, HashMap midiIos, boolean isIn, MidiDeviceLoader midiLoader) throws IllegalArgumentException, MidiUnavailableException {
 		Iterator<String> iter = ioDefs.iterator();
@@ -234,10 +277,6 @@ public class Inkfish implements InkClockListener, MidiInputListener {
 	 * @param jsContext Rhino context
 	 * @param jsScope Rhino scope
 	 * @return an array of loaded Inkfish plugins
-	 * @throws IOException
-	 * @throws ClassNotFoundException
-	 * @throws InstantiationException
-	 * @throws IllegalAccessException
 	 */
 	protected void loadPlugins(HashMap<String, ArrayList<String>> params) throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException {
 

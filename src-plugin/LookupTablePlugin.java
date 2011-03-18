@@ -9,8 +9,19 @@ import java.util.HashMap;
 import cc.atoi.inkfish.*;
 import org.mozilla.javascript.*;
 
+/**
+ * LookupTable plugin for Inkfish. This will convert any gif files in the
+ * track directory to simple value lookup tables. The y-value of the first
+ * non-blank pixel in each column of the gif normalized from 0 to 127 is the
+ * value for that spot in the table. Basically, draw a scribble in MS Paint and
+ * use it for modulating synthesizer parameters over time.
+ * @author Adam Saponara
+ */
 public class LookupTablePlugin implements InkfishPlugin {
 	
+	/**
+	 * Initializes lookup tables objects in user JavaScript
+	 */
 	public void initialize(HashMap<String, ArrayList<String>> params, File root, Context jsContext, Scriptable jsScope) {
 		
 		// Define LookupTable class in JS

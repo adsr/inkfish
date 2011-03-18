@@ -6,16 +6,40 @@ import javax.sound.midi.*;
 
 /**
  * Encapsulates MidiIo objects for use in user scripts
+ * @author Adam Saponara
  */
 public class MidiIoObject extends ScriptableObject implements Scriptable {
 	
+	/**
+	 * Required for serialization
+	 */
 	private static final long serialVersionUID = 238270592527335642L;
+	
+	/**
+	 * Thread pool for sending messages with a delay
+	 */
 	private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(64);
+	
+	/**
+	 * The underlying MIDI device
+	 */
 	private MidiIo dev;
+	
 	public MidiIoObject() { }
-	public void setDevice(MidiIo dev) { this.dev = dev; }
-	public void jsConstructor() { }
+
 	public String getClassName() { return "MidiIoObject"; }
+
+	public void jsConstructor() { }
+
+	/**
+	 * Sets the underlying MIDI device
+	 */
+	public void setDevice(MidiIo dev) { this.dev = dev; }
+	
+
+	/**
+	 * Send a MIDI message. Returns true on success.  
+	 */
 	public boolean jsFunction_write(int command, int channel, int data1, int data2, int msDelay, int msLength) {
 		if (dev == null || !(dev instanceof MidiOutput)) {
 			return false;
@@ -37,6 +61,8 @@ public class MidiIoObject extends ScriptableObject implements Scriptable {
 		}
 		return true;
 	}
+	
+	
 	/*
 	public static boolean jsFunction_sysex(Context cx, Scriptable self, Object[] data, Function func) {
 		if (dev == null || !(dev instanceof MidiOutput)) {
@@ -53,11 +79,22 @@ public class MidiIoObject extends ScriptableObject implements Scriptable {
 		return true;
 	}
 	*/
-	public String jsFunction_getDeviceName() { return dev.getName(); }
+	
+	/**
+	 * Returns name of underlying MIDI device
+	 */
+	public String jsFunction_getDeviceName() {
+		return dev.getName();
+	}
 
 }
 
+/**
+ * Threaded MIDI message executor 
+ * @author Adam Saponara
+ */
 class DelayedMidiMessage implements Runnable {
+	
 	private MidiOutput output;
 	private int command;
 	private int channel;
@@ -79,4 +116,5 @@ class DelayedMidiMessage implements Runnable {
 		catch (InvalidMidiDataException e) {
 		}
 	}
+	
 }

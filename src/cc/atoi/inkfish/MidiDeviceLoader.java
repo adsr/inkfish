@@ -2,8 +2,9 @@ package cc.atoi.inkfish;
 
 import javax.sound.midi.*;
 
-/*
+/**
  * Convenience class for loading MIDI devices
+ * @author Adam Saponara
  */
 public class MidiDeviceLoader {
 
@@ -80,18 +81,7 @@ public class MidiDeviceLoader {
 			if (!deviceName.equals(infos[i].getName())) {
 				continue;
 			}
-			try {
-				MidiDevice device = MidiSystem.getMidiDevice(infos[i]);
-				int maxReceivers = device.getMaxReceivers();
-				int maxTransmitters = device.getMaxTransmitters();
-				if ((!isReceiver || maxReceivers != 0) && (!isTransmitter || maxTransmitters != 0)) {
-					device.open();
-					return device;
-				}
-			}
-			catch (MidiUnavailableException e) {
-				continue;
-			}
+			return getMidiDeviceByNumber(i, isReceiver, isTransmitter);
 		}
 
 		return null;

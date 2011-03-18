@@ -11,6 +11,7 @@
  * Usage:
  *     php dist-plugin.php [-v]
  *
+ * @author Adam Saponara
  */
 
 // Directory separator for shell_exec commands
@@ -25,6 +26,9 @@ if (!is_dir('dist/plugins')) mkdir('dist/plugins');
 
 // For each *Plugin.class in bin-plugin/ ...
 $plugins = glob("bin-plugin/*Plugin.class");
+if (empty($plugins)) {
+	die('No class files found in bin-plugin/ directory. Compile the plugins first.');
+}
 foreach ($plugins as $plugin) {
 
 	// Substract "Plugin.class" from the end of the string
