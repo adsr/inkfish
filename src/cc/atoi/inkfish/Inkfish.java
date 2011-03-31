@@ -161,9 +161,6 @@ public class Inkfish implements InkClockListener, MidiInputListener {
 			this.jsScope = this.jsContext.initStandardObjects();
 			ScriptableObject.defineClass(jsScope, MidiIoObject.class);
 
-			// Scan for plugins
-			loadPlugins(params);
-
 			// Make MidiOut JavaScript objects
 			int iJsMidiOut = 0;
 			this.jsMidiOuts = new MidiIoObject[midiOuts.size()];
@@ -181,10 +178,9 @@ public class Inkfish implements InkClockListener, MidiInputListener {
 				jsScope.put(name, jsScope, jsMidiIn);
 			}
 
-			// Make 'out' object for out.println etc
-			Object jsOut = Context.javaToJS(System.out, jsScope);
-			ScriptableObject.putProperty(jsScope, "out", jsOut);
-
+			// Make 'out' object for out.println
+			ScriptableObject.putProperty(jsScope, "out", Context.javaToJS(System.out, jsScope));
+			
 			// Parse trackDir/*.js as user scripts
 			BufferedInputStream fin;
 			byte[] buffer;
@@ -201,6 +197,9 @@ public class Inkfish implements InkClockListener, MidiInputListener {
 				Object result = this.jsContext.evaluateString(jsScope, new String(buffer), scripts[i].getName(), 1, null);
 				fin.close();
 			}
+
+			// Scan for plugins
+			loadPlugins(params);
 
 			// Get reference to onmidiin function if it exists
 			Object func = this.jsScope.get("onmidiin", jsScope);
