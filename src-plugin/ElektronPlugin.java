@@ -28,7 +28,7 @@ public class ElektronPlugin implements InkfishPlugin {
 
 		// Machinedrum
 		if (args.containsKey("md")) {
-			// initializeDevice(ElektronMachinedrumObject.class, args.get("md"), jsContext, jsScope, midiLoader);
+			initializeDevice(ElektronMachinedrumObject.class, args.get("md"), jsContext, jsScope, midiLoader);
 		}
 		
 	}
@@ -72,15 +72,14 @@ public class ElektronPlugin implements InkfishPlugin {
 			//elektronClass.getCanonicalName()
 			ElektronObject elektron = (ElektronObject)jsContext.newObject(jsScope, elektronClass.getSimpleName());
 			try {
-				elektron.setDevices(
+				elektron.initialize(
 					new MidiInput(midiLoader.getMidiDeviceByNumber(Integer.parseInt(elektronParts[0]))),
 					new MidiOutput(midiLoader.getMidiDeviceByNumber(Integer.parseInt(elektronParts[1])))
 				);
 			}
 			catch (Exception e) {
 				// @todo no Pokemon
-				e.printStackTrace();
-				return false;
+				continue;
 			}
 			
 			// Assign object to variable in JS scope
