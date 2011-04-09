@@ -10,9 +10,9 @@ import javax.sound.midi.*;
 public class MidiInput extends MidiIo implements Receiver {
 
 	/**
-	 * Listeners (subscribes) to messages 
+	 * Listeners (subscribers) to incoming messages 
 	 */
-	private ArrayList<MidiInputListener> listeners;
+	protected ArrayList<MidiInputListener> listeners;
 
 	/**
 	 * Initializes a MIDI input port via a MidiDevice instance

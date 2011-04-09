@@ -1,8 +1,6 @@
 package cc.atoi.inkfish;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * An internal thread-based sequencer. This class generates sequencer ticks
@@ -12,27 +10,37 @@ import java.util.concurrent.TimeUnit;
 public class InkClockInternalThread extends InkClockInternal implements Runnable {
 	
 	/**
-	 * The scheduler used to generate ticks on a regular interval. 
+	 * The scheduler used to generate ticks on a regular interval
 	 */
 	private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 	
 	/**
-	 * Delay between each tick in milliseconds.
+	 * Latest ticket that was returned from scheduler
 	 */
-	private int milliDelay;
+	private ScheduledFuture ticket = null;
 	
 	/**
-	 * Number of ticks per quarter note.
+	 * Stores the value of the delay to set on the next tick
+	 */
+	private Long nextMilliDelay = null;
+	
+	/**
+	 * Delay between each tick in milliseconds
+	 */
+	private long milliDelay;
+	
+	/**
+	 * Number of ticks per quarter note
 	 */
 	private int ppqn;
 	
 	/**
-	 * Incrementing tick value.
+	 * Incrementing tick value
 	 */
 	private long tick = 0;
 	
 	/**
-	 * Increments once per tick within a single quarter note.
+	 * Increments once per tick within a single quarter note
 	 */
 	private int pulse = 0;
 	
@@ -51,8 +59,8 @@ public class InkClockInternalThread extends InkClockInternal implements Runnable
 	 * @param listener		device that listens for sequencer events
 	 * @param milliDelay	number of milliseconds between each tick
 	 */
-	public InkClockInternalThread(InkClockListener listener, int milliDelay) {
-		this(listener, milliDelay, 24);
+	public InkClockInternalThread(long milliDelay) {
+		this(milliDelay, 24);
 	}
 
 	/**
@@ -61,8 +69,7 @@ public class InkClockInternalThread extends InkClockInternal implements Runnable
 	 * @param milliDelay	number of milliseconds between each tick
 	 * @param ppqn			number of ticks per quarter note
 	 */
-	public InkClockInternalThread(InkClockListener listener, int milliDelay, int ppqn) {
-		super(listener);
+	public InkClockInternalThread(long milliDelay, int ppqn) {
 		this.ppqn = ppqn;
 		this.milliDelay = milliDelay;
 	}
@@ -71,14 +78,41 @@ public class InkClockInternalThread extends InkClockInternal implements Runnable
 	 * Invoked whenever the thread runs (each tick)
 	 */
 	public void run() {
+		
+		// Skip if paused
 		if (isPaused) return;
-		listener.onTick(tick);
+		
+		// onTick event
+		raiseOnTick(tick);
+		
+		// onQuarterNote event if applicable
 		pulse++;
 		if (pulse == ppqn) {
 			pulse = 0;
-			listener.onQuarterNote(tick);
+			raiseOnQuarterNote(tick);
 		}
+		
+		// Change delay if needed
+		if (nextMilliDelay != null) {
+			long newDelay = nextMilliDelay.longValue();
+			if (ticket != null) {
+				ticket.cancel(true);
+			}
+			ticket = scheduler.scheduleAtFixedRate(this, newDelay, newDelay, TimeUnit.MILLISECONDS);
+			this.milliDelay = newDelay;
+			nextMilliDelay = null;
+		}
+		
+		// Increment tick
 		tick++;
+	}
+	
+	/**
+	 * Sets the delay between each tick
+	 * @param milliDelay delay in milliseconds
+	 */
+	public void setDelay(long milliDelay) {
+		nextMilliDelay = new Long(milliDelay);
 	}
 
 	/**
@@ -87,12 +121,12 @@ public class InkClockInternalThread extends InkClockInternal implements Runnable
 	public void play() {
 		if (isStopped) {
 			isStopped = false;
-			scheduler.scheduleAtFixedRate(this, 0, this.milliDelay, TimeUnit.MILLISECONDS);
-			listener.onStart(tick);
+			ticket = scheduler.scheduleAtFixedRate(this, 0, this.milliDelay, TimeUnit.MILLISECONDS);
+			raiseOnStart(tick);
 		}
 		else if (isPaused) {
 			isPaused = false;
-			listener.onContinue(tick);
+			raiseOnContinue(tick);
 		}
 	}
 
@@ -100,9 +134,9 @@ public class InkClockInternalThread extends InkClockInternal implements Runnable
 	 * Stops the sequencer
 	 */
 	public void stop() {
-		scheduler.shutdownNow();
+		ticket.cancel(true);
 		isStopped = true;
-		listener.onStop(tick);
+		raiseOnStop(tick);
 	}
 
 	/**
@@ -110,7 +144,7 @@ public class InkClockInternalThread extends InkClockInternal implements Runnable
 	 */
 	public void pause() {
 		isPaused = true;
-		listener.onStop(tick);
+		raiseOnStop(tick);
 	}
 
 }

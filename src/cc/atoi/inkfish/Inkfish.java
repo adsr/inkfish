@@ -121,14 +121,16 @@ public class Inkfish implements InkClockListener, MidiInputListener {
 				System.exit(1);
 			}
 			else {
-				clock = new InkClockExternalMidi(this, new MidiInput(device), ppqn);
+				this.clock = new InkClockExternalMidi(new MidiInput(device), ppqn);
+				this.clock.addListener(this);
 				sequencer = new MidiInput(device);
 			}
 			
 		}
 		else {
 			// Internal sequencer (default to 21 ms delay)
-			this.clock = new InkClockInternalThread(this, params.containsKey("delay") ? Integer.parseInt(params.get("delay").get(0)) : 21, ppqn);
+			this.clock = new InkClockInternalThread(params.containsKey("delay") ? Integer.parseInt(params.get("delay").get(0)) : 21, ppqn);
+			this.clock.addListener(this);
 		}
 		
 		// Set jsDivisor (default to 6)
@@ -166,7 +168,7 @@ public class Inkfish implements InkClockListener, MidiInputListener {
 			this.jsMidiOuts = new MidiIoObject[midiOuts.size()];
 			for (String name : midiOuts.keySet()) {
 				MidiIoObject jsMidiOut = (MidiIoObject)this.jsContext.newObject(jsScope, "MidiIoObject");
-				jsMidiOut.setDevice(midiOuts.get(name));
+				jsMidiOut.initialize(midiOuts.get(name), this.clock);
 				jsScope.put(name, jsScope, jsMidiOut);
 				jsMidiOuts[iJsMidiOut++] = jsMidiOut;
 			}
@@ -174,7 +176,7 @@ public class Inkfish implements InkClockListener, MidiInputListener {
 			// Make MidiIn JavaScript objects
 			for (String name : midiIns.keySet()) {
 				MidiIoObject jsMidiIn = (MidiIoObject)this.jsContext.newObject(jsScope, "MidiIoObject");
-				jsMidiIn.setDevice(midiIns.get(name));
+				jsMidiIn.initialize(midiIns.get(name), this.clock);
 				jsScope.put(name, jsScope, jsMidiIn);
 			}
 
@@ -200,6 +202,14 @@ public class Inkfish implements InkClockListener, MidiInputListener {
 
 			// Scan for plugins
 			loadPlugins(params);
+			
+			// Make 'seq' JS object if internally sequenced
+			if (this.clock instanceof InkClockInternalThread) {
+				ScriptableObject.defineClass(jsScope, InkClockInternalThreadObject.class);
+				InkClockInternalThreadObject jsClock = (InkClockInternalThreadObject)this.jsContext.newObject(jsScope, "InkClockInternalThreadObject");
+				jsClock.setClock((InkClockInternalThread)this.clock);
+				jsScope.put("seq", jsScope, jsClock);
+			}
 
 			// Get reference to onmidiin function if it exists
 			Object func = this.jsScope.get("onmidiin", jsScope);

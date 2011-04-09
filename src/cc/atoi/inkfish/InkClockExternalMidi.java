@@ -32,8 +32,7 @@ public class InkClockExternalMidi extends InkClockExternal implements MidiInputL
 	 * @param ppqn		how many pulses per quarter note the external sequencer
 	 * 					is configured to send. 
 	 */
-	public InkClockExternalMidi(InkClockListener listener, MidiInput input, int ppqn) {
-		super(listener);
+	public InkClockExternalMidi(MidiInput input, int ppqn) {
 		this.input = input;
 		input.addListener(this);
 		this.ppqn = ppqn;
@@ -52,33 +51,33 @@ public class InkClockExternalMidi extends InkClockExternal implements MidiInputL
 				isRunning = true;
 				tick = 0;
 				pulse = 0;
-				listener.onStart(tick);
-				listener.onQuarterNote(tick);
+				raiseOnStart(tick);
+				raiseOnQuarterNote(tick);
 				break;
 			case ShortMessage.STOP:
 				isRunning = false;
-				listener.onStop(tick);
+				raiseOnStop(tick);
 				break;
 			case ShortMessage.TIMING_CLOCK:
 				if (!isRunning) break;
-				listener.onTick(tick);
+				raiseOnTick(tick);
 				pulse++;
 				if (pulse == ppqn) {
 					pulse = 0;
-					listener.onQuarterNote(tick);
+					raiseOnQuarterNote(tick);
 				}
 				tick++;
 				break;
 			case ShortMessage.CONTINUE:
 				isRunning = true;
-				listener.onContinue(tick);
+				raiseOnContinue(tick);
 				break;
 			case ShortMessage.CONTROL_CHANGE:
 				if ((int)mbytes[1] == 0x7B) {
 					// @todo is this a MIDI standard?
 					// 0x7B is "All notes off"
 					isRunning = false;
-					listener.onStop(tick);
+					raiseOnStop(tick);
 				}
 				break;
 		}

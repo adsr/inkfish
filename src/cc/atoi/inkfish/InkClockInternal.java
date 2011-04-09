@@ -6,10 +6,6 @@ package cc.atoi.inkfish;
  */
 abstract public class InkClockInternal extends InkClock {
 	
-	public InkClockInternal(InkClockListener listener) {
-		super(listener);
-	}
-	
 	/**
 	 * Returns true
 	 */

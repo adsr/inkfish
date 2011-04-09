@@ -7,10 +7,6 @@ package cc.atoi.inkfish;
  */
 abstract public class InkClockExternal extends InkClock {
 
-	public InkClockExternal(InkClockListener listener) {
-		super(listener);
-	}
-
 	/**
 	 * No implementation
 	 */
